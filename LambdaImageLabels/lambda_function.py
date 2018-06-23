@@ -1,4 +1,5 @@
 from __future__ import print_function
+import json
 import boto3
 import mysql.connector
 
@@ -6,8 +7,9 @@ import config
 
 def lambda_handler(event, context):
     "Process upload event, get labels and update database"
-    bucket = event['Records'][0]["s3"]["bucket"]["name"]
-    key = event['Records'][0]["s3"]["object"]["key"]
+    s3_event = json.loads(event['Records'][0]["Sns"]["Message"])
+    bucket = s3_event['Records'][0]["s3"]["bucket"]["name"]
+    key = s3_event['Records'][0]["s3"]["object"]["key"]
     print("Received event. Bucket: [%s], Key: [%s]" % (bucket, key))
 
     rek = boto3.client('rekognition')
@@ -41,25 +43,23 @@ def lambda_handler(event, context):
 
 # This is used for debugging, it will only execute when run locally
 if __name__ == "__main__":
-    # simulated s3 event
-    fake_s3_event = {
+    # simulated sns event
+    fake_sns_event = {
         "Records": [
             {
-                "eventVersion": "2.0",
-                "eventSource": "aws:s3",
-                "awsRegion": "us-west-2",
-                "eventTime": "...",
-                "eventName": "ObjectCreated:Put",
-                "s3": {
-                    "bucket": {
-                        "name": "fake-bucket"
-                    },
-                    "object": {
-                        "key": "photos/8d2567bc34013c97.png"
-                    }
+                "EventSource": "aws:sns",
+                "EventVersion": "1.0",
+                "EventSubscriptionArn": "...",
+                "Sns": {
+                    "Message": """{\"Records\":[{\"eventVersion\":\"2.0\",
+                    \"eventSource\":\"aws:s3\",\"awsRegion\":\"us-west-2\",
+                    \"eventTime\":\"...\",\"eventName\":\"ObjectCreated:Put\",
+                    \"s3\":{\"bucket\":{\"name\":\"fake-bucket\"},
+                    \"object\":{\"key\":\"photos/8d2567bc34013c97.png\"}}}]}""",
+                    "MessageAttributes": {}
                 }
             }
         ]
     }
     fake_context = []
-    lambda_handler(fake_s3_event, fake_context)
+    lambda_handler(fake_sns_event, fake_context)
